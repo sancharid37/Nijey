@@ -155,7 +155,7 @@ export default function ComingSoon() {
             }}
           >
             Nijey is almost ready. We'll tell you the moment it's live. Until
-            then go make something beautiful."
+            then go make something beautiful.
           </p>
         </>
       ) : (
