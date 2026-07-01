@@ -1,11 +1,16 @@
 import { useState } from "react";
+import Gallery from "./components/Gallery";
 
 export default function ComingSoon() {
   const [email, setEmail] = useState("");
   const [joined, setJoined] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showGallery, setShowGallery] = useState(false);
 
+  if (showGallery) {
+    return <Gallery onBack={() => setShowGallery(false)} />;
+  }
   const handleJoin = async () => {
     if (!email || !email.includes("@")) {
       setError("Please enter a valid email.");
@@ -54,6 +59,10 @@ export default function ComingSoon() {
         background: "#FAF8F4",
       }}
     >
+    <button onClick={() => setShowGallery(true)}>
+        View Office Get-Togethers
+      </button>
+
       <p
         style={{
           fontSize: "11px",
