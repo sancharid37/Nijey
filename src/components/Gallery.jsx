@@ -1,9 +1,28 @@
 import { useEffect, useMemo, useState } from "react";
-import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
+import {
+  collection,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  orderBy,
+  query,
+} from "firebase/firestore";
 import Lightbox from "./Lightbox";
 import UploadPanel from "./UploadPanel";
-import { db } from "../firebase";
+import AnnouncementBoard from "./AnnouncementBoard";
+import ConfirmDialog from "./ConfirmDialog";
+import { auth, db } from "../firebase";
 import "./Gallery.css";
+
+const TrashIcon = () => (
+  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M3 6h18" strokeLinecap="round" />
+    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M10 11v6M14 11v6" strokeLinecap="round" />
+  </svg>
+);
 
 // Small deterministic "randomness" so polaroids tilt consistently
 // on every render instead of jittering around.
@@ -27,7 +46,7 @@ function groupByEvent(docs) {
   return Array.from(map.values());
 }
 
-function EventBoard({ event, eventIndex, onOpen }) {
+function EventBoard({ event, eventIndex, onOpen, canDelete, onRequestDelete }) {
   const photos = useMemo(() => event.items.filter((i) => i.type === "photo"), [event]);
   const videos = useMemo(() => event.items.filter((i) => i.type === "video"), [event]);
 
@@ -50,16 +69,32 @@ function EventBoard({ event, eventIndex, onOpen }) {
       {photos.length > 0 && (
         <div className="board__photos">
           {photos.map((photo, i) => (
-            <button
+            <div
               key={photo.id}
-              className="polaroid"
+              className="polaroid-wrap"
               style={{ "--tilt": `${tiltFor(i + eventIndex)}deg` }}
-              onClick={() => onOpen(event.items, event.items.indexOf(photo))}
             >
-              <span className="polaroid__tape" aria-hidden="true" />
-              <img src={photo.url} alt={photo.caption || ""} loading="lazy" />
-              {photo.caption && <span className="polaroid__caption">{photo.caption}</span>}
-            </button>
+              {canDelete && (
+                <button
+                  className="item-delete"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRequestDelete(photo.id);
+                  }}
+                  aria-label="Delete photo"
+                >
+                  <TrashIcon />
+                </button>
+              )}
+              <button
+                className="polaroid"
+                onClick={() => onOpen(event.items, event.items.indexOf(photo))}
+              >
+                <span className="polaroid__tape" aria-hidden="true" />
+                <img src={photo.url} alt={photo.caption || ""} loading="lazy" />
+                {photo.caption && <span className="polaroid__caption">{photo.caption}</span>}
+              </button>
+            </div>
           ))}
         </div>
       )}
@@ -67,21 +102,34 @@ function EventBoard({ event, eventIndex, onOpen }) {
       {videos.length > 0 && (
         <div className="board__filmstrip">
           {videos.map((video) => (
-            <button
-              key={video.id}
-              className="film-frame"
-              onClick={() => onOpen(event.items, event.items.indexOf(video))}
-            >
-              <img
-                src={`https://img.youtube.com/vi/${video.youtubeId}/hqdefault.jpg`}
-                alt={video.caption || "Video thumbnail"}
-                loading="lazy"
-              />
-              <span className="film-frame__play" aria-hidden="true">
-                ▶
-              </span>
-              {video.caption && <span className="film-frame__caption">{video.caption}</span>}
-            </button>
+            <div key={video.id} className="film-frame-wrap">
+              {canDelete && (
+                <button
+                  className="item-delete item-delete--frame"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRequestDelete(video.id);
+                  }}
+                  aria-label="Delete video"
+                >
+                  <TrashIcon />
+                </button>
+              )}
+              <button
+                className="film-frame"
+                onClick={() => onOpen(event.items, event.items.indexOf(video))}
+              >
+                <img
+                  src={video.thumbnail || video.url}
+                  alt={video.caption || "Video thumbnail"}
+                  loading="lazy"
+                />
+                <span className="film-frame__play" aria-hidden="true">
+                  ▶
+                </span>
+                {video.caption && <span className="film-frame__caption">{video.caption}</span>}
+              </button>
+            </div>
           ))}
         </div>
       )}
@@ -93,6 +141,8 @@ export default function Gallery({ onBack }) {
   const [docs, setDocs] = useState(null); // null = loading
   const [active, setActive] = useState(null); // { items, index }
   const [showUpload, setShowUpload] = useState(false);
+  const [user, setUser] = useState(undefined); // undefined = auth loading
+  const [pendingDeleteId, setPendingDeleteId] = useState(null);
 
   useEffect(() => {
     const q = query(collection(db, "photos"), orderBy("createdAt", "asc"));
@@ -102,11 +152,24 @@ export default function Gallery({ onBack }) {
     return unsub;
   }, []);
 
+  useEffect(() => onAuthStateChanged(auth, (u) => setUser(u)), []);
+
   const events = useMemo(() => (docs ? groupByEvent(docs) : []), [docs]);
+  const canDelete = !!user;
 
   const openAt = (items, index) => setActive({ items, index });
   const close = () => setActive(null);
   const navigate = (index) => setActive((prev) => ({ ...prev, index }));
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return;
+    try {
+      await deleteDoc(doc(db, "photos", pendingDeleteId));
+    } catch {
+      // rare — user can just retry
+    }
+    setPendingDeleteId(null);
+  };
 
   return (
     <div className="gallery-page">
@@ -129,6 +192,8 @@ export default function Gallery({ onBack }) {
         </button>
       </header>
 
+      <AnnouncementBoard />
+
       {showUpload && <UploadPanel />}
 
       {docs === null && <p className="gallery-page__status">Loading…</p>}
@@ -139,7 +204,14 @@ export default function Gallery({ onBack }) {
       )}
 
       {events.map((event, i) => (
-        <EventBoard key={event.id} event={event} eventIndex={i} onOpen={openAt} />
+        <EventBoard
+          key={event.id}
+          event={event}
+          eventIndex={i}
+          onOpen={openAt}
+          canDelete={canDelete}
+          onRequestDelete={setPendingDeleteId}
+        />
       ))}
 
       {active && (
@@ -148,6 +220,14 @@ export default function Gallery({ onBack }) {
           index={active.index}
           onClose={close}
           onNavigate={navigate}
+        />
+      )}
+
+      {pendingDeleteId && (
+        <ConfirmDialog
+          message="Delete this item? This can't be undone."
+          onConfirm={confirmDelete}
+          onCancel={() => setPendingDeleteId(null)}
         />
       )}
     </div>

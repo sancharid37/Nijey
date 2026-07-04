@@ -63,11 +63,12 @@ export default function Lightbox({ items, index, onClose, onNavigate }) {
           <img src={current.url} alt={current.caption || ""} className="lightbox-image" />
         ) : (
           <div className="lightbox-video-wrap">
-            <iframe
-              src={`https://www.youtube.com/embed/${current.youtubeId}?autoplay=1`}
-              title={current.caption || "Video"}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
+            <video
+              key={current.url}
+              src={current.url}
+              controls
+              autoPlay
+              playsInline
             />
           </div>
         )}

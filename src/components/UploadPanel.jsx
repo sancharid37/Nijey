@@ -33,11 +33,35 @@ async function uploadToCloudinary(file) {
   return data.secure_url;
 }
 
-function extractYoutubeId(url) {
-  const match = url.match(
-    /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{11})/
-  );
-  return match ? match[1] : null;
+async function uploadVideoToCloudinary(file, onProgress) {
+  return new Promise((resolve, reject) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open(
+      "POST",
+      `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`
+    );
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        const data = JSON.parse(xhr.responseText);
+        resolve({ url: data.secure_url, thumbnail: data.secure_url.replace(/\.[^.]+$/, ".jpg") });
+      } else {
+        reject(new Error("Cloudinary video upload failed"));
+      }
+    };
+    xhr.onerror = () => reject(new Error("Cloudinary video upload failed"));
+    xhr.send(formData);
+  });
 }
 
 function LoginForm({ onError }) {
@@ -157,34 +181,39 @@ function PhotoUploadForm() {
   );
 }
 
-function VideoLinkForm() {
+function VideoUploadForm() {
   const [event, setEvent] = useState("");
   const [caption, setCaption] = useState("");
-  const [url, setUrl] = useState("");
+  const [file, setFile] = useState(null);
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const youtubeId = extractYoutubeId(url);
-    if (!event.trim() || !youtubeId) {
-      setStatus("Enter an event name and a valid YouTube link.");
+    if (!event.trim() || !file) {
+      setStatus("Pick an event name and a video file.");
       return;
     }
     setBusy(true);
+    setStatus("Uploading… 0%");
     try {
+      const { url, thumbnail } = await uploadVideoToCloudinary(file, (pct) =>
+        setStatus(`Uploading… ${pct}%`)
+      );
       await addDoc(collection(db, "photos"), {
         type: "video",
-        youtubeId,
+        url,
+        thumbnail,
         event: event.trim(),
         caption: caption.trim(),
         createdAt: serverTimestamp(),
       });
-      setStatus("Video added.");
-      setUrl("");
+      setStatus("Done — video added.");
+      setFile(null);
       setCaption("");
+      e.target.reset?.();
     } catch (err) {
-      setStatus("Something went wrong — check your Firebase rules/config.");
+      setStatus("Something went wrong — check your Firebase rules/config, or try a smaller file.");
     } finally {
       setBusy(false);
     }
@@ -192,7 +221,7 @@ function VideoLinkForm() {
 
   return (
     <form className="upload-panel__form" onSubmit={handleSubmit}>
-      <h4>Add a Video (YouTube link)</h4>
+      <h4>Add a Video</h4>
       <label>
         Event name
         <input
@@ -211,18 +240,21 @@ function VideoLinkForm() {
         />
       </label>
       <label>
-        YouTube URL
+        Video file
         <input
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://youtube.com/watch?v=..."
+          type="file"
+          accept="video/*"
+          onChange={(e) => setFile(e.target.files[0] || null)}
           required
         />
       </label>
       <button type="submit" disabled={busy}>
-        {busy ? "Adding…" : "Add Video"}
+        {busy ? "Uploading…" : "Upload Video"}
       </button>
       {status && <p className="upload-panel__status">{status}</p>}
+      <p className="upload-panel__hint">
+        Keep videos under ~100MB and a couple of minutes long for fast uploads.
+      </p>
     </form>
   );
 }
@@ -260,7 +292,7 @@ export default function UploadPanel() {
           </p>
           <div className="upload-panel__forms">
             <PhotoUploadForm />
-            <VideoLinkForm />
+            <VideoUploadForm />
           </div>
         </>
       )}
