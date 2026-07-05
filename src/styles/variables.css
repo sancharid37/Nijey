@@ -1,0 +1,31 @@
+:root {
+  /* Colors */
+  --color-bg: #ffffff;
+  --color-surface: #fafafa;
+  --color-text: #111111;
+  --color-text-secondary: #6b7280;
+  --color-border: #e5e7eb;
+  --color-hover: #f5f5f5;
+
+  /* Typography */
+  --font-family: "Inter", sans-serif;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 40px;
+  --space-2xl: 64px;
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+
+  /* Container */
+  --max-width: 1280px;
+
+  /* Animation */
+  --transition: 0.2s ease;
+}
