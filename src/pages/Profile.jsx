@@ -1,12 +1,16 @@
 // src/pages/Profile.jsx
 //
 // Shows a user's profile (photo, name, bio, discipline) and their journeys.
+// Also has the Follow / Following button for other people's profiles.
+// Profiles are login-only (see Firestore rules), so logged-out visitors
+// see a "Log in / Sign up" prompt instead.
 // URL shape: /:username (e.g. nijey.com/sanchari)
 
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getUserByUsername } from "../services/user.service.js";
 import { getUserJourneys } from "../services/journey.service.js";
+import { isFollowing, followUser, unfollowUser } from "../services/follow.service.js";
 import { useAuth } from "../context/AuthContext.jsx";
 
 function Profile() {
@@ -18,7 +22,16 @@ function Profile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [following, setFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followBusy, setFollowBusy] = useState(false);
+  const [followError, setFollowError] = useState("");
+
   useEffect(() => {
+    // Logged out: don't try to load, because the Firestore read would be
+    // rejected. The page shows a login prompt instead (see below).
+    if (!user) return;
+
     async function load() {
       setLoading(true);
       setError("");
@@ -30,9 +43,18 @@ function Profile() {
           return;
         }
         setProfile(profileData);
+        setFollowerCount(profileData.followerCount || 0);
 
         const journeysData = await getUserJourneys(profileData.id);
         setJourneys(journeysData);
+
+        // Check follow status only on other people's profiles.
+        if (user.uid !== profileData.id) {
+          const alreadyFollowing = await isFollowing(user.uid, profileData.id);
+          setFollowing(alreadyFollowing);
+        } else {
+          setFollowing(false);
+        }
       } catch (err) {
         console.error(err);
         setError("Something went wrong loading this profile.");
@@ -40,12 +62,55 @@ function Profile() {
       setLoading(false);
     }
     load();
-  }, [username]);
+  }, [username, user]);
+
+  const handleToggleFollow = async () => {
+    if (!user || followBusy) return;
+    setFollowBusy(true);
+    setFollowError("");
+
+    const wasFollowing = following;
+
+    // Update the screen first so it feels instant...
+    setFollowing(!wasFollowing);
+    setFollowerCount((prev) => (wasFollowing ? Math.max(prev - 1, 0) : prev + 1));
+
+    try {
+      if (wasFollowing) {
+        await unfollowUser(user.uid, profile.id);
+      } else {
+        await followUser(user.uid, profile.id);
+      }
+    } catch (err) {
+      // ...and put it back if the database said no.
+      console.error(err);
+      setFollowing(wasFollowing);
+      setFollowerCount((prev) => (wasFollowing ? prev + 1 : Math.max(prev - 1, 0)));
+      setFollowError("Couldn't update follow. Please try again.");
+    }
+
+    setFollowBusy(false);
+  };
+
+  if (!user) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.loginPrompt}>
+          <h2 style={styles.loginPromptHeading}>Log in to view this profile</h2>
+          <p style={styles.muted}>Join Nijey to see artists and follow their journeys.</p>
+          <div style={styles.loginPromptButtons}>
+            <Link to="/login" style={styles.followButton}>Log in</Link>
+            <Link to="/signup" style={styles.followingButton}>Sign up</Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) return <div style={styles.container}><p style={styles.muted}>Loading...</p></div>;
   if (error) return <div style={styles.container}><p style={styles.error}>{error}</p></div>;
 
-  const isOwnProfile = user && user.uid === profile.id;
+  const isOwnProfile = user.uid === profile.id;
 
   return (
     <div style={styles.container}>
@@ -68,13 +133,23 @@ function Profile() {
 
         <div style={styles.statsRow}>
           <span><strong>{journeys.length}</strong> journeys</span>
-          <span><strong>{profile.followerCount || 0}</strong> followers</span>
+          <span><strong>{followerCount}</strong> followers</span>
           <span><strong>{profile.followingCount || 0}</strong> following</span>
         </div>
 
-        {isOwnProfile && (
+        {isOwnProfile ? (
           <Link to="/settings/profile" style={styles.editButton}>Edit profile</Link>
+        ) : (
+          <button
+            onClick={handleToggleFollow}
+            disabled={followBusy}
+            style={following ? styles.followingButton : styles.followButton}
+          >
+            {following ? "Following" : "Follow"}
+          </button>
         )}
+
+        {followError && <p style={styles.error}>{followError}</p>}
       </div>
 
       <div style={styles.journeysSection}>
@@ -122,10 +197,23 @@ const styles = {
     marginTop: "1.25rem", padding: "0.5rem 1.2rem", border: "1px solid #ECECEC",
     borderRadius: "6px", color: "#111111", textDecoration: "none", fontSize: "0.9rem",
   },
+  followButton: {
+    marginTop: "1.25rem", padding: "0.5rem 1.4rem", backgroundColor: "#000000", color: "#FFFFFF",
+    border: "1px solid #000000", borderRadius: "6px", fontSize: "0.9rem", cursor: "pointer",
+    textDecoration: "none", fontFamily: "inherit",
+  },
+  followingButton: {
+    marginTop: "1.25rem", padding: "0.5rem 1.4rem", backgroundColor: "#FFFFFF", color: "#111111",
+    border: "1px solid #ECECEC", borderRadius: "6px", fontSize: "0.9rem", cursor: "pointer",
+    textDecoration: "none", fontFamily: "inherit",
+  },
+  loginPrompt: { display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "3rem 0" },
+  loginPromptHeading: { color: "#111111", marginBottom: "0.5rem" },
+  loginPromptButtons: { display: "flex", gap: "0.75rem", marginTop: "0.5rem" },
   journeysSection: { borderTop: "1px solid #ECECEC", paddingTop: "1.5rem" },
   sectionHeading: { color: "#111111", marginBottom: "1rem" },
   muted: { color: "#666666" },
-  error: { color: "#B00020" },
+  error: { color: "#B00020", fontSize: "0.875rem" },
   grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "1.25rem" },
   card: {
     textDecoration: "none", color: "inherit", border: "1px solid #ECECEC",
