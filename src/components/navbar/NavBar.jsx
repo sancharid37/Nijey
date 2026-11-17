@@ -39,7 +39,7 @@ function NavBar() {
       <form onSubmit={handleSearchSubmit} className="nav-search">
         <input
           type="text"
-          placeholder="Search..."
+          placeholder="Search journeys..."
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           className="nav-search-input"
