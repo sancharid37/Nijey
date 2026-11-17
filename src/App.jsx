@@ -2,6 +2,7 @@
 
 import { Routes, Route } from "react-router-dom";
 import NavBar from "./components/navbar/NavBar.jsx";
+import Home from "./pages/Home.jsx";
 import Signup from "./pages/Signup.jsx";
 import Login from "./pages/Login.jsx";
 import ForgotPassword from "./pages/ForgotPassword.jsx";
@@ -29,7 +30,7 @@ function App() {
     <>
       <NavBar />
       <Routes>
-        <Route path="/" element={<TestHome />} />
+        <Route path="/" element={<Home />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />

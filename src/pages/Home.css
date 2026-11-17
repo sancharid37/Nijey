@@ -1,0 +1,111 @@
+/* src/pages/Home.css
+   Homepage styles. Plain CSS (not inline) so we can use media queries
+   to adapt the layout on phones. */
+
+.home {
+  font-family: "Inter", sans-serif;
+  color: #111111;
+}
+
+.home-hero {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 5rem 1.5rem 3rem;
+  text-align: center;
+}
+
+.home-title {
+  font-family: "Manrope", "Inter", sans-serif;
+  font-size: 3rem;
+  line-height: 1.1;
+  margin: 0 0 1rem;
+}
+
+.home-subtitle {
+  color: #666666;
+  font-size: 1.15rem;
+  line-height: 1.6;
+  margin: 0 auto 2rem;
+  max-width: 540px;
+}
+
+.home-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.home-btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  text-decoration: none;
+  border: 1px solid #000000;
+}
+
+.home-btn-primary {
+  background: #000000;
+  color: #ffffff;
+}
+
+.home-btn-secondary {
+  background: #ffffff;
+  color: #111111;
+  border-color: #ececec;
+}
+
+.home-btn-secondary:hover {
+  background: #f7f7f7;
+}
+
+.home-steps {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 5rem;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+}
+
+.home-step {
+  border: 1px solid #ececec;
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.home-step-number {
+  color: #666666;
+  font-size: 0.8rem;
+  margin: 0 0 0.5rem;
+}
+
+.home-step h3 {
+  font-family: "Manrope", "Inter", sans-serif;
+  margin: 0 0 0.5rem;
+}
+
+.home-step p {
+  color: #666666;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Phones and small screens: smaller headline, stacked buttons and cards. */
+@media (max-width: 700px) {
+  .home-hero {
+    padding: 3rem 1.25rem 2rem;
+  }
+
+  .home-title {
+    font-size: 2.1rem;
+  }
+
+  .home-buttons {
+    flex-direction: column;
+  }
+
+  .home-steps {
+    grid-template-columns: 1fr;
+    padding-bottom: 3rem;
+  }
+}
