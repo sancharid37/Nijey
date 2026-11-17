@@ -42,6 +42,7 @@
 
 .nav-search {
   display: flex;
+  margin-left: auto; /* desktop: push search (and the links after it) to the right */
 }
 
 .nav-search-input {
@@ -111,6 +112,7 @@
   .nav-search {
     order: 1;
     flex: 1;
+    margin-left: 0; /* phone: search stretches to fill the bar instead */
   }
 
   .nav-search-input {
