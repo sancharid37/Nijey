@@ -1,0 +1,185 @@
+/* src/components/navbar/NavBar.css
+   Navbar styles. Plain CSS so we can adapt the layout on phones.
+   On phones the links become a drawer that slides in from the right. */
+
+.nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 2rem;
+  border-bottom: 1px solid #ececec;
+  font-family: "Inter", sans-serif;
+  background: #ffffff;
+}
+
+.nav-logo {
+  font-family: "Manrope", "Inter", sans-serif;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #111111;
+  text-decoration: none;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.nav-link {
+  color: #111111;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.nav-username {
+  color: #111111;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.nav-search {
+  display: flex;
+}
+
+.nav-search-input {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid #ececec;
+  border-radius: 100px;
+  font-size: 0.85rem;
+  width: 160px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.nav-signup {
+  color: #ffffff;
+  background: #000000;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.nav-logout {
+  background: none;
+  border: 1px solid #ececec;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+  cursor: pointer;
+  color: #111111;
+}
+
+.nav-logout:hover {
+  background: #f7f7f7;
+}
+
+/* The menu button and backdrop only exist on phones. */
+.nav-menu-button {
+  display: none;
+  background: none;
+  border: 1px solid #ececec;
+  border-radius: 6px;
+  padding: 0.35rem 0.7rem;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #111111;
+}
+
+.nav-backdrop {
+  display: none;
+}
+
+/* Phones and small screens. */
+@media (max-width: 700px) {
+  .nav {
+    padding: 0.75rem 1rem;
+  }
+
+  .nav-menu-button {
+    display: block;
+    order: 2;
+    position: relative;
+    z-index: 30; /* stays above the drawer so the X is tappable */
+  }
+
+  .nav-search {
+    order: 1;
+    flex: 1;
+  }
+
+  .nav-search-input {
+    width: 100%;
+  }
+
+  /* Dimmed backdrop behind the drawer. Tapping it closes the menu. */
+  .nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+    z-index: 10;
+  }
+
+  .nav-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* The drawer: parked off-screen to the right, slides in when open. */
+  .nav-links {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 75%;
+    max-width: 300px;
+    background: #ffffff;
+    padding: 4.5rem 1.25rem 1.5rem;
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.08);
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    transform: translateX(100%);
+    visibility: hidden;
+    transition: transform 0.28s ease, visibility 0.28s;
+    z-index: 20;
+    overflow-y: auto;
+  }
+
+  .nav-links.open {
+    transform: translateX(0);
+    visibility: visible;
+  }
+
+  .nav-links .nav-link,
+  .nav-links .nav-username,
+  .nav-links .nav-signup,
+  .nav-links .nav-logout {
+    padding: 0.85rem 0.25rem;
+    border-top: 1px solid #ececec;
+    border-radius: 0;
+    font-size: 1rem;
+    text-align: left;
+  }
+
+  .nav-links .nav-signup {
+    background: none;
+    color: #111111;
+  }
+
+  .nav-links .nav-logout {
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    width: 100%;
+  }
+}
