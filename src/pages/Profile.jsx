@@ -2,6 +2,7 @@
 //
 // Shows a user's profile (photo, name, bio, discipline) and their journeys.
 // Also has the Follow / Following button for other people's profiles.
+// Hovering over "Following" shows "Unfollow" so the click is clear.
 // Profiles are login-only (see Firestore rules), so logged-out visitors
 // see a "Log in / Sign up" prompt instead.
 // URL shape: /:username (e.g. nijey.com/sanchari)
@@ -26,6 +27,7 @@ function Profile() {
   const [followerCount, setFollowerCount] = useState(0);
   const [followBusy, setFollowBusy] = useState(false);
   const [followError, setFollowError] = useState("");
+  const [hovering, setHovering] = useState(false);
 
   useEffect(() => {
     // Logged out: don't try to load, because the Firestore read would be
@@ -68,6 +70,7 @@ function Profile() {
     if (!user || followBusy) return;
     setFollowBusy(true);
     setFollowError("");
+    setHovering(false);
 
     const wasFollowing = following;
 
@@ -112,6 +115,14 @@ function Profile() {
 
   const isOwnProfile = user.uid === profile.id;
 
+  // Pick the button's look and label: Follow, Following, or (on hover) Unfollow.
+  const followButtonStyle = !following
+    ? styles.followButton
+    : hovering
+      ? styles.unfollowButton
+      : styles.followingButton;
+  const followButtonLabel = !following ? "Follow" : hovering ? "Unfollow" : "Following";
+
   return (
     <div style={styles.container}>
       {profile.coverPhotoURL && (
@@ -142,10 +153,12 @@ function Profile() {
         ) : (
           <button
             onClick={handleToggleFollow}
+            onMouseEnter={() => setHovering(true)}
+            onMouseLeave={() => setHovering(false)}
             disabled={followBusy}
-            style={following ? styles.followingButton : styles.followButton}
+            style={followButtonStyle}
           >
-            {following ? "Following" : "Follow"}
+            {followButtonLabel}
           </button>
         )}
 
@@ -198,13 +211,18 @@ const styles = {
     borderRadius: "6px", color: "#111111", textDecoration: "none", fontSize: "0.9rem",
   },
   followButton: {
-    marginTop: "1.25rem", padding: "0.5rem 1.4rem", backgroundColor: "#000000", color: "#FFFFFF",
+    marginTop: "1.25rem", padding: "0.5rem 1.4rem", minWidth: "7rem", backgroundColor: "#000000", color: "#FFFFFF",
     border: "1px solid #000000", borderRadius: "6px", fontSize: "0.9rem", cursor: "pointer",
     textDecoration: "none", fontFamily: "inherit",
   },
   followingButton: {
-    marginTop: "1.25rem", padding: "0.5rem 1.4rem", backgroundColor: "#FFFFFF", color: "#111111",
+    marginTop: "1.25rem", padding: "0.5rem 1.4rem", minWidth: "7rem", backgroundColor: "#FFFFFF", color: "#111111",
     border: "1px solid #ECECEC", borderRadius: "6px", fontSize: "0.9rem", cursor: "pointer",
+    textDecoration: "none", fontFamily: "inherit",
+  },
+  unfollowButton: {
+    marginTop: "1.25rem", padding: "0.5rem 1.4rem", minWidth: "7rem", backgroundColor: "#FFFFFF", color: "#B00020",
+    border: "1px solid #B00020", borderRadius: "6px", fontSize: "0.9rem", cursor: "pointer",
     textDecoration: "none", fontFamily: "inherit",
   },
   loginPrompt: { display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "3rem 0" },
