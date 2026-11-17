@@ -70,28 +70,34 @@ export async function getUserJourneys(authorId) {
 }
 
 /**
- * Searches journeys by title using a "starts with" prefix match.
- * This is a common Firestore trick: querying for titles that are
- * >= the search text but < the search text + a high unicode character
- * effectively matches anything starting with what was typed.
- * Not as smart as real search (no typo tolerance, no mid-word matches),
- * but works without adding a paid search service.
+ * Searches public journeys. Firestore has no real full-text search, so we
+ * load the most recent public journeys and filter them in the browser.
+ * Every word you type must appear somewhere in the title, description or
+ * art form, in any upper/lower case. This is fine for a few hundred
+ * journeys; past that, a search service (like Algolia) is the next step.
  */
 export async function searchJourneysByTitle(searchText) {
-  if (!searchText.trim()) return [];
-  const lowerSearch = searchText.trim().toLowerCase();
-
-  console.log("SEARCHING FOR:", lowerSearch);
+  const words = searchText.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [];
 
   const q = query(
     collection(db, "journeys"),
-    where("titleLower", ">=", lowerSearch),
-    where("titleLower", "<=", lowerSearch + "\uf8ff"),
-    limit(20)
+    where("visibility", "==", "public"),
+    orderBy("updatedAt", "desc"),
+    limit(200)
   );
   const snap = await getDocs(q);
-  console.log("SEARCH RESULTS COUNT:", snap.docs.length);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((journey) => {
+      const haystack = [journey.title, journey.description, journey.discipline]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return words.every((word) => haystack.includes(word));
+    })
+    .slice(0, 20);
 }
 
 /**
@@ -136,8 +142,6 @@ export async function addJourneyUpdate({
     transaction.update(journeyRef, {
       updateCount: currentUpdateCount + 1,
       updatedAt: serverTimestamp(),
-      // If this is the journey's first update, use its image as the cover too —
-      // small nice touch so journeys don't stay coverless forever.
     });
   });
 

@@ -51,7 +51,7 @@ function Search() {
       <form onSubmit={handleSubmit} style={styles.form}>
         <input
           type="text"
-          placeholder="Search by title..."
+          placeholder="Search journeys..."
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
           style={styles.input}
@@ -62,7 +62,7 @@ function Search() {
       {loading && <p style={styles.muted}>Searching...</p>}
 
       {!loading && searched && results.length === 0 && (
-        <p style={styles.muted}>No journeys found starting with "{searchText}".</p>
+        <p style={styles.muted}>No journeys found for "{searchText}".</p>
       )}
 
       <div style={styles.results}>
